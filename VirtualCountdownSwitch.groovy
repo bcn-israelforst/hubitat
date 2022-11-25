@@ -12,6 +12,7 @@ metadata {
         attribute  "lastTimeStarted", "text"
         attribute  "dateInstalled", "number"
         attribute  "totalTimeOn", "number"
+        attribute  "usageTracker", "text"
     }
 
     preferences {
@@ -55,8 +56,10 @@ def stop() {
     
     if (logEnable) log.debug "${device.displayName} checking if totalTimeOn is null"
     state.totalTimeOn = (state.totalTimeOn == null) ? state.timeElapsed : state.timeElapsed + state.totalTimeOn
+    
+    state.usageTracker = "${state.totalTimeOn} seconds on since ${new Date(state.dateInstalled).format("MM/dd/yyyy HH:mm:ss")}"
 
-    if (logEnable) log.info "Stopping ${device.displayName}. Time elapsed ${state.timeElapsed} seconds, Total time elapsed ${state.totalTimeOn} seconds"    
+    if (logEnable) log.info "Stopping ${device.displayName}. Time elapsed ${state.timeElapsed} seconds, Usage: ${state.usageTracker}"    
 
     sendEvent(name: "timeElapsed",
               value: state.timeElapsed,
