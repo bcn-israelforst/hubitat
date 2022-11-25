@@ -1,15 +1,15 @@
 /**
  *  Virtual Countdown Switch
- *
+ *https://github.com/bcn-israelforst/hubitat/blob/da86ada89644d31ad570bb35091a19d0d2e109d7/VirtualCountdownSwitch.groovy
  */
 public static String version()      {  return "v1.0"  }
 
 metadata {
-    definition (name: "VirtualCountdownSwitch", namespace: "israelforst-hubitat", author: "Israel Forst") {
+    definition (name: "VirtualCountdownSwitch", namespace: "bcn-israelforst", author: "Israel Forst") {
         capability "Switch"
         capability "TimedSession"
         attribute  "timeElapsed", "number"
-        attribute  "timeStarted", "text"
+        attribute  "lastTimeStarted", "text"
         attribute  "dateInstalled", "number"
         attribute  "totalTimeOn", "number"
     }
@@ -53,21 +53,11 @@ def stop() {
     state.endTime = now()
     state.timeElapsed = (state.endTime - state.startTime) / 1000
     
-    if (logEnable) log.info "${device.displayName} checking if totalTimeOn is null"         
-    if( state.totalTimeOn == null) { 
-        if (logEnable) log.info "${device.displayName} Total time elapsed is null "       
-        state.totalTimeOn = state.timeElapsed
-         
-    } else {
-        if (logEnable) log.info "${device.displayName} Total time elapsed ${state.totalTimeOn} seconds"    
-        state.totalTimeOn += state.timeElapsed        
-    
-    }
-    
+    if (logEnable) log.debug "${device.displayName} checking if totalTimeOn is null"
+    state.totalTimeOn = (state.totalTimeOn == null) ? state.timeElapsed : state.timeElapsed + state.totalTimeOn
 
+    if (logEnable) log.info "Stopping ${device.displayName}. Time elapsed ${state.timeElapsed} seconds, Total time elapsed ${state.totalTimeOn} seconds"    
 
-
-    if (logEnable) log.info "${device.displayName} time elapsed ${state.timeElapsed} seconds"
     sendEvent(name: "timeElapsed",
               value: state.timeElapsed,
               descriptionText: "${device.displayName} timeElapsed: ${state.timeElapsed}",
@@ -78,12 +68,16 @@ def stop() {
 
 def start() {
     if (ignoreStart && (device.currentValue("sessionStatus") == "running")) return
+
     sendEvent(name: "sessionStatus", value: "running")
     sendEvent(name: "switch", value: "on")
     state.startTime = now()
-    state.timeStarted = new Date().format("MM/dd/yyyy HH:mm:ss")
-    if (autoStop) runIn(autoStopTimeSec, stop)
-    runIn(maxRunTime, checkRunTime)
+    state.lastTimeStarted = new Date().format("MM/dd/yyyy HH:mm:ss")
+    
+    if (autoStop) {
+        runIn(autoStopTimeSec, stop)
+        runIn(maxRunTime, checkRunTime)
+    }
 }
 
 def cancel() {
@@ -96,26 +90,27 @@ def pause() {
 }
 
 def checkRunTime() {
-    if (logEnable) log.info "checkRunTime: ${device.displayName} is running" 
+    if (logEnable) log.debug "checkRunTime: ${device.displayName} is running" 
+    
     if (device.currentValue("sessionStatus") == "running" ) {
-        if (logEnable) log.info "checkRunTime: ${device.displayName} Checking if devices exceeded max runtime"         
+        if (logEnable) log.debug "checkRunTime: ${device.displayName} Checking if devices exceeded max runtime"         
         if (((now() - state.startTime) / 1000) > maxRunTime ) {
             if (logEnable) log.info "${device.displayName} time elapsed exceeds Max Run Time. Stopping..." 
             stop()
         }
     }
-    
 }
-def setTimeRemaining(timeRemaining) {
-    if (timeRemaining) {
-        device.updateSetting("autoStopTimeSec",[type:"number", value:timeRemaining])
-        device.updateSetting("autoStop",[type:"bool", value: true])
-        if (logEnable) log.info "${device.displayName} Enable and set autoStopTimeSec to ${autoStopTime}"
-    } else {
-        device.updateSetting("autoStop",[type:"bool", value: false])
-        if (logEnable) log.info "${device.displayName} Disabled autoStop"
-    }
-}
+
+// def setTimeRemaining(timeRemaining) {
+//     if (timeRemaining) {
+//         device.updateSetting("autoStopTimeSec",[type:"number", value:timeRemaining])
+//         device.updateSetting("autoStop",[type:"bool", value: true])
+//         if (logEnable) log.info "${device.displayName} Enable and set autoStopTimeSec to ${autoStopTime}"
+//     } else {
+//         device.updateSetting("autoStop",[type:"bool", value: false])
+//         if (logEnable) log.info "${device.displayName} Disabled autoStop"
+//     }
+// }
 
 // Implement switch on/off so we can use the device in RM4
 def on() {
