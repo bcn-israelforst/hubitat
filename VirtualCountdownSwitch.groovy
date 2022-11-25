@@ -57,7 +57,7 @@ def stop() {
     if (logEnable) log.debug "${device.displayName} checking if totalTimeOn is null"
     state.totalTimeOn = (state.totalTimeOn == null) ? state.timeElapsed : state.timeElapsed + state.totalTimeOn
     
-    state.usageTracker = "${state.totalTimeOn} seconds on since ${new Date(state.dateInstalled).format("MM/dd/yyyy HH:mm:ss")}"
+    state.usageTracker = "${round(state.totalTimeOn)} seconds on since ${new Date(state.dateInstalled).format("MM/dd/yyyy hh:mm z")}"
 
     if (logEnable) log.info "Stopping ${device.displayName}. Time elapsed ${state.timeElapsed} seconds, Usage: ${state.usageTracker}"    
 
@@ -75,7 +75,7 @@ def start() {
     sendEvent(name: "sessionStatus", value: "running")
     sendEvent(name: "switch", value: "on")
     state.startTime = now()
-    state.lastTimeStarted = new Date().format("MM/dd/yyyy HH:mm:ss")
+    state.lastTimeStarted = new Date().format("MM/dd/yyyy hh:mm:ss z")
     
     if (autoStop) {
         runIn(autoStopTimeSec, stop)
